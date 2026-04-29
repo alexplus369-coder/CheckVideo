@@ -375,15 +375,39 @@
     const profileListNote = $('#profileListNote');
 
     // Cargar FFmpeg
-    async function loadFFmpeg() {
-        statusTextClean.textContent = 'Cargando FFmpeg.wasm...';
+async function loadFFmpeg() {
+    statusTextClean.textContent = 'Preparando FFmpeg (modo compatible con GitHub Pages)...';
+    try {
+        // URLs de los archivos necesarios
+        const workerScriptUrl = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/814.ffmpeg.js';
+        const coreScriptUrl = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js';
+
+        // Descargar worker y core como texto, y crear Blobs
+        const [workerResp, coreResp] = await Promise.all([
+            fetch(workerScriptUrl),
+            fetch(coreScriptUrl)
+        ]);
+        if (!workerResp.ok || !coreResp.ok) throw new Error('Error al descargar recursos de FFmpeg.');
+
+        const workerBlob = new Blob([await workerResp.text()], { type: 'application/javascript' });
+        const coreBlob = new Blob([await coreResp.text()], { type: 'application/javascript' });
+
+        const workerBlobURL = URL.createObjectURL(workerBlob);
+        const coreBlobURL = URL.createObjectURL(coreBlob);
+
         await ffmpeg.load({
-            coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+            workerURL: workerBlobURL,
+            coreURL: coreBlobURL,
         });
+
         ffmpegLoaded = true;
         statusTextClean.textContent = 'Listo. Carga un video.';
         updateProfileListNote();
+    } catch (err) {
+        console.error(err);
+        statusTextClean.textContent = 'Error al cargar FFmpeg. Verifica tu conexión o recarga.';
     }
+}
 
     // --- Funciones compartidas para análisis de metadatos ---
     async function analyzeVideoFile(file, previewElement, statusCallback) {
