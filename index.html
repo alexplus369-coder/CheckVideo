@@ -374,40 +374,38 @@
     const profileNameInput = $('#profileNameInput');
     const profileListNote = $('#profileListNote');
 
-    // Cargar FFmpeg
-async function loadFFmpeg() {
-    statusTextClean.textContent = 'Preparando FFmpeg (modo compatible con GitHub Pages)...';
-    try {
-        // URLs de los archivos necesarios
-        const workerScriptUrl = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/814.ffmpeg.js';
-        const coreScriptUrl = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js';
+    // ===== Carga segura de FFmpeg con Blobs (resuelve el error de Worker) =====
+    async function loadFFmpeg() {
+        statusTextClean.textContent = 'Descargando FFmpeg (modo GitHub Pages)...';
+        try {
+            // 1. Descargar worker script y core script desde unpkg (CORS abierto)
+            const [workerResp, coreResp] = await Promise.all([
+                fetch('https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/814.ffmpeg.js'),
+                fetch('https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js')
+            ]);
+            if (!workerResp.ok || !coreResp.ok) throw new Error('Error al obtener recursos.');
 
-        // Descargar worker y core como texto, y crear Blobs
-        const [workerResp, coreResp] = await Promise.all([
-            fetch(workerScriptUrl),
-            fetch(coreScriptUrl)
-        ]);
-        if (!workerResp.ok || !coreResp.ok) throw new Error('Error al descargar recursos de FFmpeg.');
+            // 2. Convertir a Blobs y generar URLs locales (mismo origen)
+            const workerBlob = new Blob([await workerResp.text()], { type: 'application/javascript' });
+            const coreBlob   = new Blob([await coreResp.text()],   { type: 'application/javascript' });
 
-        const workerBlob = new Blob([await workerResp.text()], { type: 'application/javascript' });
-        const coreBlob = new Blob([await coreResp.text()], { type: 'application/javascript' });
+            const workerBlobURL = URL.createObjectURL(workerBlob);
+            const coreBlobURL   = URL.createObjectURL(coreBlob);
 
-        const workerBlobURL = URL.createObjectURL(workerBlob);
-        const coreBlobURL = URL.createObjectURL(coreBlob);
+            // 3. Establecer URL del Worker ANTES de load (evita que use la URL por defecto)
+            ffmpeg.workerURL = workerBlobURL;
 
-        await ffmpeg.load({
-            workerURL: workerBlobURL,
-            coreURL: coreBlobURL,
-        });
+            // 4. Cargar con la URL del core personalizada
+            await ffmpeg.load({ coreURL: coreBlobURL });
 
-        ffmpegLoaded = true;
-        statusTextClean.textContent = 'Listo. Carga un video.';
-        updateProfileListNote();
-    } catch (err) {
-        console.error(err);
-        statusTextClean.textContent = 'Error al cargar FFmpeg. Verifica tu conexión o recarga.';
+            ffmpegLoaded = true;
+            statusTextClean.textContent = '✅ FFmpeg listo. Carga un video.';
+            updateProfileListNote();
+        } catch (err) {
+            console.error('Error al cargar FFmpeg:', err);
+            statusTextClean.textContent = '❌ No se pudo cargar FFmpeg. Verifica tu conexión.';
+        }
     }
-}
 
     // --- Funciones compartidas para análisis de metadatos ---
     async function analyzeVideoFile(file, previewElement, statusCallback) {
@@ -639,7 +637,6 @@ async function loadFFmpeg() {
     saveProfileBtn.addEventListener('click', () => {
         const name = profileNameInput.value.trim();
         if (!name || !currentAnalyzerMeta) return;
-        // Intentar extraer software/comentario de los metadatos
         let software = '';
         let comment = '';
         const lines = currentAnalyzerMeta.split('\n');
@@ -665,16 +662,14 @@ async function loadFFmpeg() {
 
     function updateProfileSelect() {
         const profiles = getSavedProfiles();
-        // Eliminar opciones guardadas previas
-        const select = profileSelect;
-        Array.from(select.options).forEach(opt => {
-            if (opt.value.startsWith('saved_')) select.removeChild(opt);
+        Array.from(profileSelect.options).forEach(opt => {
+            if (opt.value.startsWith('saved_')) profileSelect.removeChild(opt);
         });
         for (const [key, val] of Object.entries(profiles)) {
             const opt = document.createElement('option');
             opt.value = key;
             opt.textContent = `💾 ${key.replace('saved_', '')}`;
-            select.appendChild(opt);
+            profileSelect.appendChild(opt);
         }
     }
 
@@ -684,7 +679,7 @@ async function loadFFmpeg() {
         profileListNote.textContent = names ? `Perfiles guardados: ${names}` : 'Sin perfiles guardados.';
     }
 
-    // Inicialización
+    // Inicio: cargar FFmpeg con la técnica blob
     loadFFmpeg().then(() => {
         updateProfileSelect();
         updateProfileListNote();
