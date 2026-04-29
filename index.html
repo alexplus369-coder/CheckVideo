@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepClean Pro – Limpiador y Analizador de Metadatos</title>
+    <style>
+        :root {
+            --bg: #0b0b12;
+            --card: #14141f;
+            --border: #252535;
+            --accent: #6c5ce7;
+            --accent2: #a29bfe;
+            --text: #e0e0f0;
+            --text2: #a0a0c0;
+            --danger: #ff6b6b;
+            --success: #2ed573;
+            --radius: 16px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            background-image: radial-gradient(ellipse at 30% 40%, #1a1a30 0%, #07070e 100%);
+        }
+        .container {
+            width: 100%;
+            max-width: 860px;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px 22px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            backdrop-filter: blur(4px);
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .logo span {
+            background: linear-gradient(135deg, var(--accent), #c4b5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text2);
+            padding: 10px 18px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 8px 8px 0 0;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tab-btn.active {
+            color: #fff;
+            background: #1e1e2e;
+            box-shadow: 0 -2px 0 var(--accent);
+        }
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            background: #0d0d17;
+            color: var(--text2);
+        }
+        .dropzone:hover, .dropzone.dragover {
+            border-color: var(--accent);
+            background: #1a1a2a;
+            color: #fff;
+        }
+        .dropzone input { display: none; }
+        .meta-preview {
+            background: #0c0c16;
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 0.8rem;
+            color: #b0b0d0;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: 'Fira Code', monospace;
+        }
+        .section-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #ccc;
+            margin-bottom: 4px;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 660px) { .options-grid { grid-template-columns: 1fr; } }
+        .option-block {
+            background: #0f0f19;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        select, input[type="text"], input[type="number"] {
+            background: #1a1a28;
+            border: 1px solid var(--border);
+            color: #eee;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            width: 100%;
+        }
+        select:focus, input:focus { border-color: var(--accent); }
+        .btn {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+        .btn:hover:not(:disabled) { background: #7d6ff0; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent2);
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #25253a;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            transition: width 0.2s;
+        }
+        .download-link {
+            text-decoration: none;
+            background: var(--success);
+            color: #000;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .small-note { font-size: 0.7rem; color: #777; }
+        .flex-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .badge {
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logo">
+        <span>🧬 DeepClean Pro</span>
+        <span class="badge">v3.0 Analizador</span>
+    </div>
+
+    <!-- Pestañas -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="clean">🧼 Limpieza</button>
+        <button class="tab-btn" data-tab="analyzer">🔍 Analizador de Metadatos</button>
+    </div>
+
+    <!-- Contenido Pestaña Limpieza -->
+    <div class="tab-content active" id="tab-clean">
+        <p style="color:var(--text2); font-size:0.9rem;">Eliminación agresiva de metadatos y huellas de IA. Procesamiento local.</p>
+        <div class="dropzone" id="dropzoneClean">
+            <div>📂 Arrastra un video o haz clic para seleccionar</div>
+            <input type="file" id="fileInputClean" accept="video/*">
+            <div class="file-info" id="fileInfoClean" style="display:none;"></div>
+        </div>
+        <div class="option-block">
+            <div class="section-title">🎵 Reemplazar audio externo</div>
+            <div class="flex-row">
+                <input type="file" id="audioInput" accept="audio/*" style="flex:2;">
+                <button class="btn-outline" id="clearAudioBtn" style="padding:6px 12px;">Quitar</button>
+            </div>
+        </div>
+        <div class="meta-preview" id="metaPreviewClean" style="max-height:120px;">⏳ Sin video cargado.</div>
+        <div class="options-grid">
+            <div class="option-block">
+                <div class="section-title">⚡ Modo</div>
+                <label><input type="radio" name="mode" value="remux" checked> Remux</label>
+                <label><input type="radio" name="mode" value="reencode"> Re‑encode</label>
+            </div>
+            <div class="option-block">
+                <div class="section-title">🏷️ Perfil post‑limpieza</div>
+                <select id="profileSelect">
+                    <option value="none">Sin metadatos</option>
+                    <option value="blender">Blender Video Sequencer</option>
+                    <option value="kdenlive">Kdenlive</option>
+                    <option value="openshot">OpenShot</option>
+                    <option value="shotcut">Shotcut</option>
+                    <option value="ffmpeg">FFmpeg</option>
+                    <option value="olive">Olive Editor</option>
+                    <option value="custom">✏️ Personalizado…</option>
+                </select>
+                <div id="customFields" style="display:none; flex-direction:column; gap:6px;">
+                    <input type="text" id="customSoftware" placeholder="Software (ej: Blender 4.0)">
+                    <input type="text" id="customComment" placeholder="Comentario">
+                </div>
+            </div>
+        </div>
+        <button class="btn" id="advancedToggle">🛡️ Protección anti‑detección ▸</button>
+        <div id="advancedPanel" style="display:none; flex-direction:column; gap:12px; background:#0a0a12; padding:16px; border-radius:12px;">
+            <div class="section-title">Alteración de píxeles</div>
+            <label><input type="checkbox" class="forensic-check" id="chkNoise"> Ruido visual fino</label>
+            <label><input type="checkbox" class="forensic-check" id="chkBlurSharpen"> Desenfoque + reafilado</label>
+            <label><input type="checkbox" class="forensic-check" id="chkFilmGrain"> Grano analógico</label>
+            <label><input type="checkbox" class="forensic-check" id="chkSpeed"> Micro‑variación velocidad</label>
+            <label><input type="checkbox" class="forensic-check" id="chkColorShift"> Corrección color</label>
+            <label><input type="checkbox" class="forensic-check" id="chkRotate"> Rotación sutil (0.5°)</label>
+            <div class="flex-row"><span>Velocidad:</span><input type="range" id="speedRange" min="1.01" max="1.03" step="0.01" value="1.02"><span id="speedVal">1.02x</span></div>
+            <div class="flex-row"><span>Color:</span><input type="range" id="colorIntensity" min="0.5" max="2.0" step="0.1" value="1.1"><span id="colorVal">1.1x</span></div>
+            <div class="section-title">Audio</div>
+            <label><input type="checkbox" class="forensic-check" id="chkPitchShift"> Micro‑cambio pitch</label>
+            <label><input type="checkbox" class="forensic-check" id="chkRoomNoise"> Ruido ambiente</label>
+        </div>
+        <div>
+            <div class="progress-bar" id="progressContainerClean" style="display:none;"><div class="progress-fill" id="progressFillClean"></div></div>
+            <div id="statusTextClean" style="min-height:20px;"></div>
+        </div>
+        <div class="flex-row">
+            <button class="btn" id="cleanBtn" disabled>🧼 Limpiar</button>
+            <a class="download-link" id="downloadLink" style="display:none;">⬇️ Descargar</a>
+            <button class="btn-outline" id="resetCleanBtn">↺ Reiniciar</button>
+        </div>
+    </div>
+
+    <!-- Contenido Pestaña Analizador de Metadatos -->
+    <div class="tab-content" id="tab-analyzer">
+        <p style="color:var(--text2); font-size:0.9rem;">Examina metadatos, copia y guarda perfiles personalizados.</p>
+        <div class="dropzone" id="dropzoneAnalyzer">
+            <div>📂 Sube un video para analizar sus metadatos</div>
+            <input type="file" id="fileInputAnalyzer" accept="video/*">
+            <div class="file-info" id="fileInfoAnalyzer" style="display:none;"></div>
+        </div>
+        <div class="meta-preview" id="metaPreviewAnalyzer" style="min-height:200px;">🔎 Los metadatos aparecerán aquí...</div>
+        <div class="flex-row" style="justify-content: space-between;">
+            <div>
+                <button class="btn-outline" id="copyMetaBtn">📋 Copiar metadatos</button>
+                <button class="btn-outline" id="saveProfileBtn" disabled>💾 Guardar como perfil</button>
+                <input type="text" id="profileNameInput" placeholder="Nombre del perfil" style="width:140px; margin-left:6px;">
+            </div>
+            <span class="small-note" id="profileListNote"></span>
+        </div>
+        <div class="small-note">Los perfiles guardados aparecerán en el selector de la pestaña de limpieza.</div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
+<script>
+(() => {
+    const { FFmpeg, fetchFile } = FFmpegWASM;
+    const ffmpeg = new FFmpeg();
+
+    // Estado global
+    let ffmpegLoaded = false;
+    let currentAnalyzerMeta = '';
+    let currentCleanVideoFile = null;
+    let externalAudioFile = null;
+
+    // Utilidades DOM
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    // Pestañas
+    const tabBtns = $$('.tab-btn');
+    const tabContents = $$('.tab-content');
+    tabBtns.forEach(btn => btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    }));
+
+    // Referencias a elementos de limpieza
+    const dropzoneClean = $('#dropzoneClean');
+    const fileInputClean = $('#fileInputClean');
+    const fileInfoClean = $('#fileInfoClean');
+    const metaPreviewClean = $('#metaPreviewClean');
+    const profileSelect = $('#profileSelect');
+    const customFields = $('#customFields');
+    const customSoftware = $('#customSoftware');
+    const customComment = $('#customComment');
+    const modeRadios = document.getElementsByName('mode');
+    const audioInput = $('#audioInput');
+    const clearAudioBtn = $('#clearAudioBtn');
+    const advancedToggle = $('#advancedToggle');
+    const advancedPanel = $('#advancedPanel');
+    const cleanBtn = $('#cleanBtn');
+    const downloadLink = $('#downloadLink');
+    const resetCleanBtn = $('#resetCleanBtn');
+    const progressContainerClean = $('#progressContainerClean');
+    const progressFillClean = $('#progressFillClean');
+    const statusTextClean = $('#statusTextClean');
+    // Forense
+    const forensicChecks = $$('.forensic-check');
+    const speedRange = $('#speedRange');
+    const speedVal = $('#speedVal');
+    const colorIntensity = $('#colorIntensity');
+    const colorVal = $('#colorVal');
+
+    // Referencias analizador
+    const dropzoneAnalyzer = $('#dropzoneAnalyzer');
+    const fileInputAnalyzer = $('#fileInputAnalyzer');
+    const fileInfoAnalyzer = $('#fileInfoAnalyzer');
+    const metaPreviewAnalyzer = $('#metaPreviewAnalyzer');
+    const copyMetaBtn = $('#copyMetaBtn');
+    const saveProfileBtn = $('#saveProfileBtn');
+    const profileNameInput = $('#profileNameInput');
+    const profileListNote = $('#profileListNote');
+
+    // Cargar FFmpeg
+    async function loadFFmpeg() {
+        statusTextClean.textContent = 'Cargando FFmpeg.wasm...';
+        await ffmpeg.load({
+            coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js',
+        });
+        ffmpegLoaded = true;
+        statusTextClean.textContent = 'Listo. Carga un video.';
+        updateProfileListNote();
+    }
+
+    // --- Funciones compartidas para análisis de metadatos ---
+    async function analyzeVideoFile(file, previewElement, statusCallback) {
+        if (!ffmpegLoaded) return;
+        const logs = [];
+        ffmpeg.on('log', ({ type, message }) => logs.push({ type, message }));
+        await ffmpeg.writeFile('analyze_temp.mp4', await fetchFile(file));
+        try { await ffmpeg.exec(['-i', 'analyze_temp.mp4', '-f', 'null', '-']); } catch (_) {}
+        const relevant = logs.filter(l => l.type === 'stderr' || l.type === 'stdout').map(l => l.message).join('\n');
+        previewElement.textContent = relevant.trim() || 'No se detectaron metadatos.';
+        await ffmpeg.deleteFile('analyze_temp.mp4');
+        ffmpeg.off('log', null);
+        if (statusCallback) statusCallback('Análisis completado.');
+        return relevant;
+    }
+
+    // --- Pestaña Limpieza ---
+    function handleCleanFile(file) {
+        currentCleanVideoFile = file;
+        fileInfoClean.style.display = 'inline-block';
+        fileInfoClean.textContent = `${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+        analyzeVideoFile(file, metaPreviewClean, (msg) => {
+            statusTextClean.textContent = msg;
+            cleanBtn.disabled = false;
+        });
+    }
+
+    dropzoneClean.addEventListener('click', () => fileInputClean.click());
+    fileInputClean.addEventListener('change', (e) => { if (e.target.files[0]) handleCleanFile(e.target.files[0]); });
+    dropzoneClean.addEventListener('dragover', (e) => { e.preventDefault(); dropzoneClean.classList.add('dragover'); });
+    dropzoneClean.addEventListener('dragleave', () => dropzoneClean.classList.remove('dragover'));
+    dropzoneClean.addEventListener('drop', (e) => {
+        e.preventDefault(); dropzoneClean.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) handleCleanFile(e.dataTransfer.files[0]);
+    });
+
+    audioInput.addEventListener('change', (e) => { externalAudioFile = e.target.files[0] || null; });
+    clearAudioBtn.addEventListener('click', () => { audioInput.value = ''; externalAudioFile = null; });
+
+    profileSelect.addEventListener('change', () => {
+        customFields.style.display = profileSelect.value === 'custom' ? 'flex' : 'none';
+        if (profileSelect.value.startsWith('saved_')) {
+            const profiles = getSavedProfiles();
+            const prof = profiles[profileSelect.value];
+            if (prof) {
+                customSoftware.value = prof.software || '';
+                customComment.value = prof.comment || '';
+                customFields.style.display = 'flex';
+            }
+        }
+    });
+
+    advancedToggle.addEventListener('click', () => {
+        const visible = advancedPanel.style.display === 'flex';
+        advancedPanel.style.display = visible ? 'none' : 'flex';
+        advancedToggle.textContent = visible ? '🛡️ Protección anti‑detección ▸' : '🛡️ Protección anti‑detección ▾';
+    });
+
+    speedRange.addEventListener('input', () => speedVal.textContent = speedRange.value);
+    colorIntensity.addEventListener('input', () => colorVal.textContent = colorIntensity.value);
+
+    function isForensicActive() {
+        return [...forensicChecks].some(cb => cb.checked) || externalAudioFile;
+    }
+
+    function getMetadataFromProfile() {
+        const p = profileSelect.value;
+        if (p === 'none') return null;
+        if (p === 'custom') {
+            return {
+                software: customSoftware.value.trim() || 'Custom tool',
+                comment: customComment.value.trim() || 'Generated with open source'
+            };
+        }
+        if (p.startsWith('saved_')) {
+            const profiles = getSavedProfiles();
+            return profiles[p] || null;
+        }
+        const map = {
+            blender: { software: 'Blender 4.0 (Linux)', comment: 'Created with Blender Video Sequencer' },
+            kdenlive: { software: 'Kdenlive 23.08', comment: 'Edited with Kdenlive on Linux' },
+            openshot: { software: 'OpenShot Video Editor', comment: 'OpenShot rendering' },
+            shotcut: { software: 'Shotcut', comment: 'Shotcut MLT engine' },
+            ffmpeg: { software: 'FFmpeg', comment: 'Encoded with FFmpeg (libavcodec)' },
+            olive: { software: 'Olive Video Editor', comment: 'Olive 0.2 nightly' }
+        };
+        return map[p] || null;
+    }
+
+    cleanBtn.addEventListener('click', async () => {
+        if (!currentCleanVideoFile || !ffmpegLoaded) return;
+        cleanBtn.disabled = true;
+        downloadLink.style.display = 'none';
+        progressContainerClean.style.display = 'block';
+        progressFillClean.style.width = '0%';
+
+        let mode = [...modeRadios].find(r => r.checked).value;
+        if (isForensicActive()) mode = 'reencode';
+
+        const args = ['-i', 'input.mp4'];
+        let hasExternalAudio = false;
+        if (externalAudioFile) {
+            await ffmpeg.writeFile('ext_audio', await fetchFile(externalAudioFile));
+            args.push('-i', 'ext_audio');
+            hasExternalAudio = true;
+        }
+        args.push('-map', hasExternalAudio ? '0:v:0' : '0');
+        if (hasExternalAudio) args.push('-map', '1:a:0');
+        if (mode === 'remux') args.push('-c', 'copy');
+        else { args.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k'); }
+
+        let vf = [], af = [];
+        if (mode === 'reencode') {
+            if ($('#chkSpeed').checked) {
+                const sp = speedRange.value;
+                vf.push(`setpts=${(1/sp).toFixed(3)}*PTS`);
+                af.push(`atempo=${sp}`);
+            }
+            if ($('#chkNoise').checked) vf.push('noise=alls=10:allf=t');
+            if ($('#chkBlurSharpen').checked) vf.push('gblur=sigma=1.2:steps=2,unsharp=5:5:1.0:5:5:0.0');
+            if ($('#chkFilmGrain').checked) vf.push('grain=12:4');
+            if ($('#chkRotate').checked) vf.push('rotate=0.5*PI/180:fillcolor=black');
+            if ($('#chkColorShift').checked) {
+                const ci = colorIntensity.value;
+                vf.push(`eq=brightness=${(0.02*ci).toFixed(2)}:saturation=${ci}:gamma=1.05`);
+            }
+            if ($('#chkPitchShift').checked && !$('#chkSpeed').checked) {
+                af.push('asetrate=44100*1.02,atempo=1/1.02');
+            }
+            if ($('#chkRoomNoise').checked && !hasExternalAudio) {
+                af.push('anoisesrc=c=white:a=0.005,atrim=duration=99999 [noise]; [0:a] [noise] amix=inputs=2:duration=first');
+            }
+        }
+        if (vf.length) args.push('-vf', vf.join(','));
+        if (af.length) args.push('-af', af.join(','));
+
+        args.push('-map_metadata', '-1', '-map_chapters', '-1');
+        args.push('-fflags', '+bitexact', '-flags:v', '+bitexact', '-flags:a', '+bitexact');
+        const meta = getMetadataFromProfile();
+        if (meta) {
+            if (meta.software) args.push('-metadata', `software=${meta.software}`);
+            if (meta.comment) args.push('-metadata', `comment=${meta.comment}`);
+        }
+        args.push('-movflags', '+faststart', '-y', 'output.mp4');
+
+        try {
+            await ffmpeg.writeFile('input.mp4', await fetchFile(currentCleanVideoFile));
+            ffmpeg.on('progress', ({ progress: p }) => {
+                progressFillClean.style.width = Math.round(p*100) + '%';
+                statusTextClean.textContent = `Procesando... ${Math.round(p*100)}%`;
+            });
+            await ffmpeg.exec(args);
+            const data = await ffmpeg.readFile('output.mp4');
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = `clean_${currentCleanVideoFile.name.replace(/\.\w+$/, '.mp4')}`;
+            downloadLink.style.display = 'inline-flex';
+            statusTextClean.textContent = '¡Listo! Descarga disponible.';
+        } catch (e) {
+            console.error(e);
+            statusTextClean.textContent = 'Error en limpieza.';
+        } finally {
+            ffmpeg.off('progress', null);
+            try { await ffmpeg.deleteFile('input.mp4'); } catch (_) {}
+            try { await ffmpeg.deleteFile('output.mp4'); } catch (_) {}
+            try { await ffmpeg.deleteFile('ext_audio'); } catch (_) {}
+            cleanBtn.disabled = false;
+        }
+    });
+
+    resetCleanBtn.addEventListener('click', () => {
+        fileInputClean.value = '';
+        currentCleanVideoFile = null;
+        externalAudioFile = null;
+        audioInput.value = '';
+        fileInfoClean.style.display = 'none';
+        metaPreviewClean.textContent = '⏳ Sin video cargado.';
+        cleanBtn.disabled = true;
+        downloadLink.style.display = 'none';
+        progressContainerClean.style.display = 'none';
+        statusTextClean.textContent = ffmpegLoaded ? 'Listo.' : 'Cargando...';
+        profileSelect.value = 'none';
+        customFields.style.display = 'none';
+        document.querySelector('input[name="mode"][value="remux"]').checked = true;
+        advancedPanel.style.display = 'none';
+        advancedToggle.textContent = '🛡️ Protección anti‑detección ▸';
+        forensicChecks.forEach(cb => cb.checked = false);
+        speedRange.value = 1.02; speedVal.textContent = '1.02';
+        colorIntensity.value = 1.1; colorVal.textContent = '1.1';
+    });
+
+    // --- Pestaña Analizador ---
+    function handleAnalyzerFile(file) {
+        fileInfoAnalyzer.style.display = 'inline-block';
+        fileInfoAnalyzer.textContent = `${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+        analyzeVideoFile(file, metaPreviewAnalyzer, (msg) => {
+            currentAnalyzerMeta = metaPreviewAnalyzer.textContent;
+            saveProfileBtn.disabled = !currentAnalyzerMeta.trim();
+        });
+    }
+
+    dropzoneAnalyzer.addEventListener('click', () => fileInputAnalyzer.click());
+    fileInputAnalyzer.addEventListener('change', (e) => { if (e.target.files[0]) handleAnalyzerFile(e.target.files[0]); });
+    dropzoneAnalyzer.addEventListener('dragover', (e) => { e.preventDefault(); dropzoneAnalyzer.classList.add('dragover'); });
+    dropzoneAnalyzer.addEventListener('dragleave', () => dropzoneAnalyzer.classList.remove('dragover'));
+    dropzoneAnalyzer.addEventListener('drop', (e) => {
+        e.preventDefault(); dropzoneAnalyzer.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) handleAnalyzerFile(e.dataTransfer.files[0]);
+    });
+
+    copyMetaBtn.addEventListener('click', async () => {
+        if (!currentAnalyzerMeta) return;
+        try {
+            await navigator.clipboard.writeText(currentAnalyzerMeta);
+            alert('Metadatos copiados al portapapeles.');
+        } catch {
+            alert('No se pudo copiar. Hazlo manualmente.');
+        }
+    });
+
+    // Guardar perfil desde analizador
+    function getSavedProfiles() {
+        try { return JSON.parse(localStorage.getItem('deepclean_profiles') || '{}'); } catch { return {}; }
+    }
+    function saveProfiles(profiles) {
+        localStorage.setItem('deepclean_profiles', JSON.stringify(profiles));
+    }
+
+    saveProfileBtn.addEventListener('click', () => {
+        const name = profileNameInput.value.trim();
+        if (!name || !currentAnalyzerMeta) return;
+        // Intentar extraer software/comentario de los metadatos
+        let software = '';
+        let comment = '';
+        const lines = currentAnalyzerMeta.split('\n');
+        for (const line of lines) {
+            if (line.includes('software') || line.includes('Software')) {
+                const match = line.match(/:\s*(.+)/);
+                if (match) software = match[1].trim();
+            }
+            if (line.includes('comment') || line.includes('Comment')) {
+                const match = line.match(/:\s*(.+)/);
+                if (match) comment = match[1].trim();
+            }
+        }
+        if (!software) software = name;
+        const profiles = getSavedProfiles();
+        profiles[`saved_${name}`] = { software, comment };
+        saveProfiles(profiles);
+        updateProfileSelect();
+        profileNameInput.value = '';
+        updateProfileListNote();
+        alert(`Perfil "${name}" guardado.`);
+    });
+
+    function updateProfileSelect() {
+        const profiles = getSavedProfiles();
+        // Eliminar opciones guardadas previas
+        const select = profileSelect;
+        Array.from(select.options).forEach(opt => {
+            if (opt.value.startsWith('saved_')) select.removeChild(opt);
+        });
+        for (const [key, val] of Object.entries(profiles)) {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = `💾 ${key.replace('saved_', '')}`;
+            select.appendChild(opt);
+        }
+    }
+
+    function updateProfileListNote() {
+        const profiles = getSavedProfiles();
+        const names = Object.keys(profiles).map(k => k.replace('saved_', '')).join(', ');
+        profileListNote.textContent = names ? `Perfiles guardados: ${names}` : 'Sin perfiles guardados.';
+    }
+
+    // Inicialización
+    loadFFmpeg().then(() => {
+        updateProfileSelect();
+        updateProfileListNote();
+    });
+
+})();
+</script>
+</body>
+</html>
