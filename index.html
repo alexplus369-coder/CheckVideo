@@ -375,37 +375,24 @@
     const profileListNote = $('#profileListNote');
 
     // ===== Carga segura de FFmpeg con Blobs (resuelve el error de Worker) =====
-    async function loadFFmpeg() {
-        statusTextClean.textContent = 'Descargando FFmpeg (modo GitHub Pages)...';
-        try {
-            // 1. Descargar worker script y core script desde unpkg (CORS abierto)
-            const [workerResp, coreResp] = await Promise.all([
-                fetch('https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/814.ffmpeg.js'),
-                fetch('https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js')
-            ]);
-            if (!workerResp.ok || !coreResp.ok) throw new Error('Error al obtener recursos.');
+   async function loadFFmpeg() {
+    statusTextClean.textContent = 'Cargando FFmpeg (local)...';
+    try {
+        // Rutas relativas a los archivos en tu repositorio
+        const workerURL = './lib/814.ffmpeg.js';
+        const coreURL   = './lib/ffmpeg-core.js';
 
-            // 2. Convertir a Blobs y generar URLs locales (mismo origen)
-            const workerBlob = new Blob([await workerResp.text()], { type: 'application/javascript' });
-            const coreBlob   = new Blob([await coreResp.text()],   { type: 'application/javascript' });
+        ffmpeg.workerURL = workerURL;   // Fija el worker antes de load
+        await ffmpeg.load({ coreURL });
 
-            const workerBlobURL = URL.createObjectURL(workerBlob);
-            const coreBlobURL   = URL.createObjectURL(coreBlob);
-
-            // 3. Establecer URL del Worker ANTES de load (evita que use la URL por defecto)
-            ffmpeg.workerURL = workerBlobURL;
-
-            // 4. Cargar con la URL del core personalizada
-            await ffmpeg.load({ coreURL: coreBlobURL });
-
-            ffmpegLoaded = true;
-            statusTextClean.textContent = '✅ FFmpeg listo. Carga un video.';
-            updateProfileListNote();
-        } catch (err) {
-            console.error('Error al cargar FFmpeg:', err);
-            statusTextClean.textContent = '❌ No se pudo cargar FFmpeg. Verifica tu conexión.';
-        }
+        ffmpegLoaded = true;
+        statusTextClean.textContent = '✅ FFmpeg listo. Carga un video.';
+        updateProfileListNote();
+    } catch (err) {
+        console.error('Error al cargar FFmpeg:', err);
+        statusTextClean.textContent = '❌ No se pudo cargar FFmpeg.';
     }
+}
 
     // --- Funciones compartidas para análisis de metadatos ---
     async function analyzeVideoFile(file, previewElement, statusCallback) {
